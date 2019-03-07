@@ -56,6 +56,7 @@ The process is divided into four main steps:
 A good starting point to deal with different aspect of SharePoint REST API is here: [https://docs.microsoft.com/en-us/sharepoint/dev/sp-add-ins/get-to-know-the-sharepoint-rest-service](https://docs.microsoft.com/en-us/sharepoint/dev/sp-add-ins/get-to-know-the-sharepoint-rest-service)
 
 **Error Handling**
+
 I like to use scopes to organize the process sequences because everything is explained here ;) : [https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-control-flow-run-steps-group-scopes](https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-control-flow-run-steps-group-scopes)
 
 My Logic App overall structure with error handling looks like this:
@@ -65,6 +66,7 @@ My Logic App overall structure with error handling looks like this:
 As you can see, each logical decomposition represented by a scope has a parallel branch to manage error that occurred somewhere in the scope. Up to you to plug any custom logic to manage your errors.
 
 **Logic App Variables**
+
 To help you to understand the data manipulation inside the flow, here is the explanation for every variable we use in the Logic App:
 
  - *SiteAbsoluteUrl*: 
@@ -136,6 +138,7 @@ For each item sent back by Liquid, I create the related "FolderToProcessObject" 
 ![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list7.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list7.PNG)
 
 **Step 3: Batch update SharePoint items**
+
 For sure, this step is only needed if we have folders to proceed.
 So first, we check the length of the *FolderToProcess* array variable to make sure it has content.
 
@@ -164,18 +167,21 @@ The final step of this sequence is to receive and format the batch response and 
 ![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list10.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list10.PNG)
 
 **Step 4: Report**
+
 Entirely optional, this step gather information from the *BatchResponse* array and send them to a mail recipient using the SMTP connector.
 
 ![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list11.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list11.PNG)
 
 ## The Liquid Connector
 **Prerequisites**
+
 To use the Liquid connector, we need a basic Azure Integration Account to consume from our Logic App. More info here: [https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-enterprise-integration-create-integration-account](https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-enterprise-integration-create-integration-account)
 
 Also,  we need a bit of understanding about Liquid's syntax and the way it works. 2 resources are useful for that: from Microsoft ([A great help is here: [https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-enterprise-integration-liquid-transform](https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-enterprise-integration-liquid-transform)
 ](A%20great%20help%20is%20here:%20%5Bhttps://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-enterprise-integration-liquid-transform%5D%28https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-enterprise-integration-liquid-transform%29)) and from the Liquid official editor ([https://shopify.github.io/liquid/](https://shopify.github.io/liquid/)).
 
 **The Liquid Template**
+
 If you have read the Liquid documentation on Azure, you know that your Liquid template needs to be stored in an Integration Account service. Once, uploaded and your Logic App connected to this Integration Account, you can consume it from the Logic App. So, let's go directly to the point and look at the template code.
 
 ![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list12.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list12.PNG)
