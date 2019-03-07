@@ -177,8 +177,7 @@ Entirely optional, this step gather information from the *BatchResponse* array a
 
 To use the Liquid connector, we need a basic Azure Integration Account to consume from our Logic App. More info here: [https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-enterprise-integration-create-integration-account](https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-enterprise-integration-create-integration-account)
 
-Also,  we need a bit of understanding about Liquid's syntax and the way it works. 2 resources are useful for that: from Microsoft ([A great help is here: [https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-enterprise-integration-liquid-transform](https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-enterprise-integration-liquid-transform)
-](A%20great%20help%20is%20here:%20%5Bhttps://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-enterprise-integration-liquid-transform%5D%28https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-enterprise-integration-liquid-transform%29)) and from the Liquid official editor ([https://shopify.github.io/liquid/](https://shopify.github.io/liquid/)).
+Also,  we need a bit of understanding about Liquid's syntax and the way it works. 2 resources are useful for that: from Microsoft ([https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-enterprise-integration-liquid-transform](https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-enterprise-integration-liquid-transform)) and from the Liquid official editor ([https://shopify.github.io/liquid/](https://shopify.github.io/liquid/)).
 
 **The Liquid Template**
 
