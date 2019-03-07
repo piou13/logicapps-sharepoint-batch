@@ -11,14 +11,14 @@ Logic App offers a great alternative to these approaches because we can leverage
  - We can control and it takes care of the reliability (i.e: by using Retry-Policy)
  - We can control errors handling
  - We can monitor and alert
- - We 'only' focus on the control flow and messages exchanges
+ - We 'only' focus on the control flow and messaging between services
 
 On the other hand,
 
  - it's a new environment that impose a new way of thinking (at least for me ^^) and transposing some concepts like fetching big content or batching operations could be burdensome.
  - We don't necessary have the same control on data operations and transformations compared to a pure scripting approach (i.e: the platform could be hard to extend, we can only use the set of predefined function, cannot easily manipulate the concept of local variables, etc...etc...)
 
-This sample show a way to implement fetching over 5000 items (by overcoming the SharePoint REST limit of 5000 items max by response), applying some transformation and business logic using Liquid when Logic App OOTB actions are too limited, and batching operation using the `_api/$batch` endpoint of SharePoint.
+This sample show a way to implement fetching over 5000 items (by overcoming the SharePoint REST limit of 5000 items max by response), applying some transformation and business logic using Liquid when Logic App OOTB actions are too limited, and batching operation back to SharePoint using the `_api/$batch` endpoint of SharePoint.
 ## The Scenario
 For this sample, let's create a simple scenario where we have a document library named *LogicAppSharePointBatch* with a custom string column named *FolderCode*.
 
