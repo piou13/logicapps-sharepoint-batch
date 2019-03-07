@@ -1,0 +1,15 @@
+[
+    {% for c in content %}
+        {% unless c.FolderCode %}
+            {
+                "FolderId": {{ c.Id }},
+                {% assign fileref = c.FieldValuesAsText.FileRef | Split: '/' %}
+                "FolderName": "{{ fileref.last }}",
+                "FolderEtag": {{ c.odataetag }},
+                {% capture paths %}{% for path in fileref offset: 3 %}{{ path }}|{% endfor %}{% endcapture %}
+                {% assign filerefSorted = paths | Split: '|' | Sort: | Join: ', ' %}
+                "FolderCode": "FOLDER{{ c.Id }} ({{ filerefSorted }})"
+            },
+        {% endunless %}
+    {% endfor %}
+]
