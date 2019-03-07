@@ -22,7 +22,7 @@ This sample show a way to implement fetching over 5000 items (by overcoming the 
 ## The Scenario
 For this sample, let's create a simple scenario where we have a document library named *LogicAppSharePointBatch* with a custom string column named *FolderCode*.
 
-![list1](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list1.PNG)
+![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list1.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list1.PNG)
 
 We need to get all folders from a documents library  and apply them a 'custom code' using a little 'dummy' pattern.
 We want the *FolderCode* to be:
@@ -33,14 +33,14 @@ I know, it's a stupid pattern, but it's just for demo purpose ^^
 
 So, after the job, we expect any *FolderCode* to be updated with this pattern.
 
-![list2](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list2.PNG)
+![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list2.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list2.PNG)
 
 ## The SharePoint List
 For our test, we inject more than 5000 folders to make sure we hit the list threshold, but, more important, to make sure the REST request for all folders does not content 'all folders' but the 5000 first ones.
 These folders doesn't have to be at the root. We can have a folder structure.
 Here's my situation:
 
-[list3]
+![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list3.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list3.PNG)
 
 ## The Logic App
 The process is divided into four main steps:
@@ -60,7 +60,7 @@ I like to use scopes to organize the process sequences because everything is exp
 
 My Logic App overall structure with error handling looks like this:
 
-[list4]
+![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list4.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list4.PNG)
 
 As you can see, each logical decomposition represented by a scope has a parallel branch to manage error that occurred somewhere in the scope. Up to you to plug any custom logic to manage your errors.
 
@@ -92,7 +92,7 @@ Stores the content of the batch request body for the SharePoint batch query.
 
 **Step 1: Fetch items**
 
-[list5]
+![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list5.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list5.PNG)
 
 The challenge here occurs when we have more than 5000 items in the documents library. The SharePoint REST API can returns up to 5000 items max if we specify the `$top=5000` parameter, but no more. In this case, SharePoint returns pages of response containing 5000 items. Here, the next result page can be accessed by getting the `odata.nextLink` value from the response.
 
@@ -108,7 +108,7 @@ The only tricky point I had here was to replace any attribute using a dot (.) in
 
 **Step 2: Check items**
 
-[list6]
+![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list6.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list6.PNG)
 
 In this step, we want to check all the items to filter and transform according to our rules.
 First, we want to keep only those that don't have a *FolderCode* defined.
@@ -127,12 +127,13 @@ More information about Liquid later but my objective here is to start from the J
       "FolderId": [item_id],
       "FolderName": "[folder_name]"
     }
+
 Let's call this object a "FolderToProcessObject".
 In order to do that, I defined and stored a Liquid template to manage these operations. Then, I consume it from the Liquid action "Transform JSON to JSON".
 
 For each item sent back by Liquid, I create the related "FolderToProcessObject" object and append it to my *FolderToProcess* array variable.
 
-[list7]
+![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list7.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list7.PNG)
 
 **Step 3: Batch update SharePoint items**
 For sure, this step is only needed if we have folders to proceed.
@@ -148,7 +149,7 @@ It took me a while before handling the way Logic App manages newlines and the HT
 
 i.e: Just to illustrate my point on one action,
 
-[list8]
+![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list8.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list8.PNG)
 
 Between the end of ChangeSet header and HTTP request, we need two lines (in fact hit 'ENTER' 3 times..) and between the HTTP request header and the body, we need only one line. Anyway, if you face the error `"The header value must be of the format header name: header value"`, dig this point ^^.
 
@@ -156,17 +157,16 @@ Finally, we build the complete batch request body using a Compose action called 
 
 To actually execute the batch request, we use the so useful SharePoint action "Send HTTP Request to SharePoint". Be aware of the Content-Type header declaration that uses the multipart and the batch boundary.
 
-[list9]
+![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list9.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list9.PNG)
 
 The final step of this sequence is to receive and format the batch response and append it to our *BatchResponse* array variable.
 
-[list10]
+![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list10.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list10.PNG)
 
 **Step 4: Report**
 Entirely optional, this step gather information from the *BatchResponse* array and send them to a mail recipient using the SMTP connector.
 
-[list11]
-
+![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list11.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list11.PNG)
 
 ## The Liquid Connector
 **Prerequisites**
@@ -178,7 +178,7 @@ Also,  we need a bit of understanding about Liquid's syntax and the way it works
 **The Liquid Template**
 If you have read the Liquid documentation on Azure, you know that your Liquid template needs to be stored in an Integration Account service. Once, uploaded and your Logic App connected to this Integration Account, you can consume it from the Logic App. So, let's go directly to the point and look at the template code.
 
-[list12]
+![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list12.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list12.PNG)
 
 `content` : it's the representation of our provided JSON.
 
