@@ -218,6 +218,9 @@ The final step of this sequence is to receive and format the batch response and 
 
 ![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list10.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list10.PNG)
 
+<sub>**[NOTE ABOUT THIS STEP]**
+For demo purpose, I used Logic App native actions and function to demonstrate their usage (after all, it's a Logic App oriented tutorial...), but as I told you, we can easily have performances issues and limitations. If you want to keep performances here, I highly recommend to leverage again a Liquid Template in order to convert JSON to Text (there's a special action for that). Loops in Liquid are a lot quicker than Logic App ones, and Liquid has a more complete set of functions (like Math functions).</sub>
+
 **Step 4: Report**
 
 Entirely optional, this step gather information from the *BatchResponse* array and send them to a mail recipient using the SMTP connector.
@@ -254,4 +257,16 @@ If you have read the Liquid documentation on Azure, you know that your Liquid te
 
 ## Install the sample
 
-todo
+**Prerequisites**
+
+ - An Azure subscription
+ - A Resource Group
+ - To be an owner of the Resource Group
+
+**The sample contains:**
+
+ - The Azure ARM Template to deploy the Logic App and the Integration Account
+ - The Liquid Template
+ - The PowerShell setup script
+
+To install the sample, run the PowerShell script, enter credentials and enter the name of your Resource Group where you want to install the solution.
