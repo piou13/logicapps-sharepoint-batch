@@ -1,6 +1,7 @@
 [
     {% for c in content %}
-        {% unless c.FolderCode %}
+        {% assign ct = c.ContentTypeId | Slice: 0, 6 %}
+        {% if c.FolderCode.size == 0 and ct == '0x0120' %}
             {
                 "FolderId": {{ c.Id }},
                 {% assign fileref = c.FieldValuesAsText.FileRef | Split: '/' %}
@@ -10,6 +11,6 @@
                 {% assign filerefSorted = paths | Split: '|' | Sort: | Join: ', ' %}
                 "FolderCode": "FOLDER{{ c.Id }} ({{ filerefSorted }})"
             },
-        {% endunless %}
+        {% endif %}
     {% endfor %}
 ]
