@@ -1,0 +1,895 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "ResourceGroupName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the resource group to deploy the solution."
+            }
+        },
+        "LiquidFile": {
+            "type": "string",
+            "metadata": {
+                "description": "Content of the liquid file to upload to Integration Account."
+            }
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Logic/workflows",
+            "name": "LogicAppSharePointBatch",
+            "apiVersion": "2016-06-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "state": "Enabled",
+                "definition": {
+                    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+                    "actions": {
+                        "FetchItems": {
+                            "actions": {
+                                "FixedItemsJson": {
+                                    "description": "Properties that contain a 'dot' (like odata.etag) need to be replaced and the dot removed because Liquid does not manage JSON object property with dot in name.",
+                                    "inputs": {
+                                        "body": "@json(replace(string(body('ItemsJson')), 'odata.', 'odata'))"
+                                    },
+                                    "runAfter": {
+                                        "ItemsJson": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "Compose"
+                                },
+                                "GetItems": {
+                                    "inputs": {
+                                        "body": {
+                                            "headers": {
+                                                "Accept": "application/json; odata=minimalmetadata"
+                                            },
+                                            "method": "GET",
+                                            "uri": "_api/web/lists/getbytitle('@{variables('ListName')}')/items?$top=5000&$Expand=FieldValuesAsText&$Select=Id,FolderCode,ContentTypeId,FieldValuesAsText/FileRef"
+                                        },
+                                        "host": {
+                                            "connection": {
+                                                "name": "@parameters('$connections')['sharepointonline']['connectionId']"
+                                            }
+                                        },
+                                        "method": "post",
+                                        "path": "/datasets/@{encodeURIComponent(encodeURIComponent(variables('SiteAbsoluteUrl')))}/httprequest"
+                                    },
+                                    "runAfter": {},
+                                    "type": "ApiConnection"
+                                },
+                                "IfPaged": {
+                                    "actions": {
+                                        "Set_NextLinkUrl": {
+                                            "inputs": {
+                                                "name": "NextLinkUrl",
+                                                "value": "@{replace(body('GetItems')['odata.nextLink'], variables('SiteAbsoluteUrl'), '')}"
+                                            },
+                                            "runAfter": {},
+                                            "type": "SetVariable"
+                                        },
+                                        "WhileNextPage": {
+                                            "actions": {
+                                                "GetNextItems": {
+                                                    "inputs": {
+                                                        "body": {
+                                                            "headers": {
+                                                                "Accept": "application/json; odata=nometadata"
+                                                            },
+                                                            "method": "GET",
+                                                            "uri": "@variables('NextLinkUrl')"
+                                                        },
+                                                        "host": {
+                                                            "connection": {
+                                                                "name": "@parameters('$connections')['sharepointonline']['connectionId']"
+                                                            }
+                                                        },
+                                                        "method": "post",
+                                                        "path": "/datasets/@{encodeURIComponent(encodeURIComponent(variables('SiteAbsoluteUrl')))}/httprequest"
+                                                    },
+                                                    "runAfter": {},
+                                                    "type": "ApiConnection"
+                                                },
+                                                "IfNextLink": {
+                                                    "actions": {
+                                                        "Set_NextLinkUrl_Recursive": {
+                                                            "inputs": {
+                                                                "name": "NextLinkUrl",
+                                                                "value": "@{replace(body('GetNextItems')['odata.nextLink'], variables('SiteAbsoluteUrl'), '')}"
+                                                            },
+                                                            "runAfter": {},
+                                                            "type": "SetVariable"
+                                                        }
+                                                    },
+                                                    "expression": {
+                                                        "and": [
+                                                            {
+                                                                "equals": [
+                                                                    "@variables('NextLink')",
+                                                                    "@true"
+                                                                ]
+                                                            }
+                                                        ]
+                                                    },
+                                                    "runAfter": {
+                                                        "Set_NextLink_Recursive": [
+                                                            "Succeeded"
+                                                        ]
+                                                    },
+                                                    "type": "If"
+                                                },
+                                                "MergeItemsArrayRecursive": {
+                                                    "inputs": "@union(variables('ItemsArray'), body('GetNextItems').value)",
+                                                    "runAfter": {
+                                                        "GetNextItems": [
+                                                            "Succeeded"
+                                                        ]
+                                                    },
+                                                    "type": "Compose"
+                                                },
+                                                "Set_ItemsArray_Recursive": {
+                                                    "inputs": {
+                                                        "name": "ItemsArray",
+                                                        "value": "@outputs('MergeItemsArrayRecursive')"
+                                                    },
+                                                    "runAfter": {
+                                                        "MergeItemsArrayRecursive": [
+                                                            "Succeeded"
+                                                        ]
+                                                    },
+                                                    "type": "SetVariable"
+                                                },
+                                                "Set_NextLink_Recursive": {
+                                                    "inputs": {
+                                                        "name": "NextLink",
+                                                        "value": "@contains(body('GetNextItems'), 'odata.nextLink')"
+                                                    },
+                                                    "runAfter": {
+                                                        "Set_ItemsArray_Recursive": [
+                                                            "Succeeded"
+                                                        ]
+                                                    },
+                                                    "type": "SetVariable"
+                                                }
+                                            },
+                                            "expression": "@not(equals(variables('NextLink'), true))",
+                                            "limit": {
+                                                "count": 60,
+                                                "timeout": "PT1H"
+                                            },
+                                            "runAfter": {
+                                                "Set_NextLinkUrl": [
+                                                    "Succeeded"
+                                                ]
+                                            },
+                                            "type": "Until"
+                                        }
+                                    },
+                                    "expression": {
+                                        "and": [
+                                            {
+                                                "equals": [
+                                                    "@variables('NextLink')",
+                                                    "@true"
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    "runAfter": {
+                                        "Set_NextLink": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "If"
+                                },
+                                "ItemsJson": {
+                                    "inputs": {
+                                        "content": "@variables('ItemsArray')",
+                                        "schema": {
+                                            "items": {
+                                                "properties": {
+                                                    "ContentTypeId": {
+                                                        "type": "string"
+                                                    },
+                                                    "FieldValuesAsText": {
+                                                        "properties": {
+                                                            "FileRef": {
+                                                                "type": "string"
+                                                            },
+                                                            "odata.editLink": {
+                                                                "type": "string"
+                                                            },
+                                                            "odata.id": {
+                                                                "type": "string"
+                                                            },
+                                                            "odata.type": {
+                                                                "type": "string"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    },
+                                                    "FieldValuesAsText@odata.navigationLinkUrl": {
+                                                        "type": "string"
+                                                    },
+                                                    "FolderCode": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "ID": {
+                                                        "type": "integer"
+                                                    },
+                                                    "Id": {
+                                                        "type": "integer"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            },
+                                            "type": "array"
+                                        }
+                                    },
+                                    "runAfter": {
+                                        "IfPaged": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "ParseJson"
+                                },
+                                "MergeItemsArray": {
+                                    "inputs": "@union(variables('ItemsArray'), body('GetItems').value)",
+                                    "runAfter": {
+                                        "GetItems": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "Compose"
+                                },
+                                "Set_ItemsArray": {
+                                    "inputs": {
+                                        "name": "ItemsArray",
+                                        "value": "@outputs('MergeItemsArray')"
+                                    },
+                                    "runAfter": {
+                                        "MergeItemsArray": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "SetVariable"
+                                },
+                                "Set_NextLink": {
+                                    "inputs": {
+                                        "name": "NextLink",
+                                        "value": "@contains(body('GetItems'), 'odata.nextLink')"
+                                    },
+                                    "runAfter": {
+                                        "Set_ItemsArray": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "SetVariable"
+                                }
+                            },
+                            "runAfter": {
+                                "InitializeBatchResponse": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Scope"
+                        },
+                        "FetchItemsErrorHandling": {
+                            "actions": {},
+                            "runAfter": {
+                                "FetchItems": [
+                                    "Failed",
+                                    "TimedOut"
+                                ]
+                            },
+                            "type": "Scope"
+                        },
+                        "Finalize": {
+                            "actions": {
+                                "Results": {
+                                    "inputs": "Total Folders: @{length(variables('ItemsArray'))}\nFolders to Processed: \n-------------------------------------------------------------------------------------\nBATCH RESPONSE:\n-------------------------------------------------------------------------------------\n@{variables('BatchResponse')}",
+                                    "runAfter": {},
+                                    "type": "Compose"
+                                }
+                            },
+                            "runAfter": {
+                                "UpdateFolders": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Scope"
+                        },
+                        "InitializeBatchBoundary": {
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "BatchBoundary",
+                                        "type": "String",
+                                        "value": "@{concat('batch_', string(guid()))}"
+                                    }
+                                ]
+                            },
+                            "runAfter": {
+                                "InitializeNextLinkUrl": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "InitializeVariable"
+                        },
+                        "InitializeBatchPagesArray": {
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "BatchPagesArray",
+                                        "type": "Array"
+                                    }
+                                ]
+                            },
+                            "runAfter": {
+                                "InitializeChangeSetBoundary": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "InitializeVariable"
+                        },
+                        "InitializeBatchRequestBody": {
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "BatchRequestBody",
+                                        "type": "String"
+                                    }
+                                ]
+                            },
+                            "runAfter": {
+                                "InitializeBatchPagesArray": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "InitializeVariable"
+                        },
+                        "InitializeBatchResponse": {
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "BatchResponse",
+                                        "type": "String"
+                                    }
+                                ]
+                            },
+                            "runAfter": {
+                                "InitializeFoldersToProcess": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "InitializeVariable"
+                        },
+                        "InitializeChangeSetBoundary": {
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "ChangeSetBoundary",
+                                        "type": "String",
+                                        "value": "@{concat('changeset_', string(guid()))}"
+                                    }
+                                ]
+                            },
+                            "runAfter": {
+                                "InitializeBatchBoundary": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "InitializeVariable"
+                        },
+                        "InitializeChangeSetRequestBody": {
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "ChangeSetRequestBody",
+                                        "type": "String"
+                                    }
+                                ]
+                            },
+                            "runAfter": {
+                                "InitializeBatchRequestBody": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "InitializeVariable"
+                        },
+                        "InitializeFoldersToProcess": {
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "FoldersToProcess",
+                                        "type": "Array"
+                                    }
+                                ]
+                            },
+                            "runAfter": {
+                                "InitializeChangeSetRequestBody": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "InitializeVariable"
+                        },
+                        "InitializeItemsArray": {
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "ItemsArray",
+                                        "type": "Array"
+                                    }
+                                ]
+                            },
+                            "runAfter": {
+                                "InitializeListName": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "InitializeVariable"
+                        },
+                        "InitializeListName": {
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "ListName",
+                                        "type": "String",
+                                        "value": "LogicAppSharePointBatch"
+                                    }
+                                ]
+                            },
+                            "runAfter": {
+                                "InitializeSiteAbsoluteUrl": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "InitializeVariable"
+                        },
+                        "InitializeNextLink": {
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "NextLink",
+                                        "type": "Boolean",
+                                        "value": "@false"
+                                    }
+                                ]
+                            },
+                            "runAfter": {
+                                "InitializeItemsArray": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "InitializeVariable"
+                        },
+                        "InitializeNextLinkUrl": {
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "NextLinkUrl",
+                                        "type": "String"
+                                    }
+                                ]
+                            },
+                            "runAfter": {
+                                "InitializeNextLink": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "InitializeVariable"
+                        },
+                        "InitializeSiteAbsoluteUrl": {
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "SiteAbsoluteUrl",
+                                        "type": "String",
+                                        "value": "https://sewolca.sharepoint.com/sites/poc-finpub/"
+                                    }
+                                ]
+                            },
+                            "runAfter": {},
+                            "type": "InitializeVariable"
+                        },
+                        "TransformAndGetFoldersToProcess": {
+                            "actions": {
+                                "GetFoldersToProcess": {
+                                    "inputs": {
+                                        "content": "@body('FixedItemsJson')",
+                                        "integrationAccount": {
+                                            "map": {
+                                                "name": "Folder-To-Process"
+                                            }
+                                        }
+                                    },
+                                    "kind": "JsonToJson",
+                                    "runAfter": {},
+                                    "type": "Liquid"
+                                },
+                                "SetFoldersToProcess": {
+                                    "inputs": {
+                                        "name": "FoldersToProcess",
+                                        "value": "@body('GetFoldersToProcess')"
+                                    },
+                                    "runAfter": {
+                                        "GetFoldersToProcess": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "SetVariable"
+                                }
+                            },
+                            "runAfter": {
+                                "FetchItems": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Scope"
+                        },
+                        "TransformAndGetFoldersToProcessErrorHandling": {
+                            "actions": {},
+                            "runAfter": {
+                                "TransformAndGetFoldersToProcess": [
+                                    "Failed",
+                                    "TimedOut"
+                                ]
+                            },
+                            "type": "Scope"
+                        },
+                        "UpdateFolders": {
+                            "actions": {
+                                "IfFoldersNeedUpdate": {
+                                    "actions": {
+                                        "ComposeBatchPageSize": {
+                                            "inputs": 1000,
+                                            "runAfter": {},
+                                            "type": "Compose"
+                                        },
+                                        "ProcessBatchPages": {
+                                            "actions": {
+                                                "AppendBatchRequestBody": {
+                                                    "inputs": {
+                                                        "name": "BatchRequestBody",
+                                                        "value": "--@{variables('BatchBoundary')}\nContent-Type: multipart/mixed; boundary=\"@{variables('ChangeSetBoundary')}\"\nContent-Transfer-Encoding: binary\n\n"
+                                                    },
+                                                    "runAfter": {
+                                                        "TakeRest": [
+                                                            "Succeeded"
+                                                        ]
+                                                    },
+                                                    "type": "AppendToStringVariable"
+                                                },
+                                                "AppendChangeSetRequestBodyEnd": {
+                                                    "inputs": {
+                                                        "name": "ChangeSetRequestBody",
+                                                        "value": "\n--@{variables('ChangeSetBoundary')}--\n\n"
+                                                    },
+                                                    "runAfter": {
+                                                        "ForEachFolderToProcess": [
+                                                            "Succeeded"
+                                                        ]
+                                                    },
+                                                    "type": "AppendToStringVariable"
+                                                },
+                                                "BatchUpdateItems": {
+                                                    "description": "SharePoint can only batch 1000 requests max at a time.",
+                                                    "inputs": {
+                                                        "body": {
+                                                            "body": "@{outputs('FinalRequestBody')}",
+                                                            "headers": {
+                                                                "Accept": "*/*",
+                                                                "Content-Type": "multipart/mixed; boundary=\"@{variables('BatchBoundary')}\""
+                                                            },
+                                                            "method": "POST",
+                                                            "uri": "_api/$batch"
+                                                        },
+                                                        "host": {
+                                                            "connection": {
+                                                                "name": "@parameters('$connections')['sharepointonline']['connectionId']"
+                                                            }
+                                                        },
+                                                        "method": "post",
+                                                        "path": "/datasets/@{encodeURIComponent(encodeURIComponent(variables('SiteAbsoluteUrl')))}/httprequest"
+                                                    },
+                                                    "runAfter": {
+                                                        "FinalRequestBody": [
+                                                            "Succeeded"
+                                                        ]
+                                                    },
+                                                    "type": "ApiConnection"
+                                                },
+                                                "FinalRequestBody": {
+                                                    "inputs": "@{variables('BatchRequestBody')}\n\n@{variables('ChangeSetRequestBody')}\n\n--@{variables('BatchBoundary')}--",
+                                                    "runAfter": {
+                                                        "AppendChangeSetRequestBodyEnd": [
+                                                            "Succeeded"
+                                                        ]
+                                                    },
+                                                    "type": "Compose"
+                                                },
+                                                "ForEachFolderToProcess": {
+                                                    "actions": {
+                                                        "AppendChangeSetRequestBody": {
+                                                            "inputs": {
+                                                                "name": "ChangeSetRequestBody",
+                                                                "value": "\n--@{variables('ChangeSetBoundary')}\nContent-Type: application/http\nContent-Transfer-Encoding: binary\n\n\nPATCH @{variables('SiteAbsoluteUrl')}_api/web/lists/getbytitle('@{variables('ListName')}')/items(@{items('ForEachFolderToProcess')['FolderId']}) HTTP/1.1\nContent-Type: application/json;odata=verbose\nAccept: application/json;odata=verbose\nIf-Match: *\n\n{\"__metadata\": {\"type\": \"SP.Data.LogicAppSharePointBatchItem\" },\"FolderCode\": \"@{items('ForEachFolderToProcess')['FolderCode']}\"}\n"
+                                                            },
+                                                            "runAfter": {},
+                                                            "type": "AppendToStringVariable"
+                                                        }
+                                                    },
+                                                    "foreach": "@outputs('TakePage')",
+                                                    "runAfter": {
+                                                        "AppendBatchRequestBody": [
+                                                            "Succeeded"
+                                                        ]
+                                                    },
+                                                    "runtimeConfiguration": {
+                                                        "concurrency": {
+                                                            "repetitions": 50
+                                                        }
+                                                    },
+                                                    "type": "Foreach"
+                                                },
+                                                "ForEachResponseMessage": {
+                                                    "actions": {
+                                                        "AppendBatchResponse": {
+                                                            "inputs": {
+                                                                "name": "BatchResponse",
+                                                                "value": "@{outputs('BatchResult')}\n-------------------------------------------------------------------------------------\n"
+                                                            },
+                                                            "runAfter": {
+                                                                "BatchResult": [
+                                                                    "Succeeded"
+                                                                ]
+                                                            },
+                                                            "type": "AppendToStringVariable"
+                                                        },
+                                                        "BatchResult": {
+                                                            "inputs": "@base64ToString(item().body['$content'])",
+                                                            "runAfter": {},
+                                                            "type": "Compose"
+                                                        }
+                                                    },
+                                                    "foreach": "@body('BatchUpdateItems')['$multipart']",
+                                                    "runAfter": {
+                                                        "SetFoldersToProcessArray": [
+                                                            "Succeeded"
+                                                        ]
+                                                    },
+                                                    "runtimeConfiguration": {
+                                                        "concurrency": {
+                                                            "repetitions": 50
+                                                        }
+                                                    },
+                                                    "type": "Foreach"
+                                                },
+                                                "ReInitBatchRequestBody": {
+                                                    "inputs": {
+                                                        "name": "BatchRequestBody",
+                                                        "value": "@{trim(' ')}"
+                                                    },
+                                                    "runAfter": {},
+                                                    "type": "SetVariable"
+                                                },
+                                                "ReInitChangeSetRequestBody": {
+                                                    "inputs": {
+                                                        "name": "ChangeSetRequestBody",
+                                                        "value": "@{trim(' ')}"
+                                                    },
+                                                    "runAfter": {
+                                                        "ReInitBatchRequestBody": [
+                                                            "Succeeded"
+                                                        ]
+                                                    },
+                                                    "type": "SetVariable"
+                                                },
+                                                "SetFoldersToProcessArray": {
+                                                    "inputs": {
+                                                        "name": "FoldersToProcess",
+                                                        "value": "@outputs('TakeRest')"
+                                                    },
+                                                    "runAfter": {
+                                                        "BatchUpdateItems": [
+                                                            "Succeeded"
+                                                        ]
+                                                    },
+                                                    "type": "SetVariable"
+                                                },
+                                                "TakePage": {
+                                                    "inputs": "@take(variables('FoldersToProcess'), outputs('ComposeBatchPageSize'))",
+                                                    "runAfter": {
+                                                        "ReInitChangeSetRequestBody": [
+                                                            "Succeeded"
+                                                        ]
+                                                    },
+                                                    "type": "Compose"
+                                                },
+                                                "TakeRest": {
+                                                    "inputs": "@skip(variables('FoldersToProcess'), outputs('ComposeBatchPageSize'))",
+                                                    "runAfter": {
+                                                        "TakePage": [
+                                                            "Succeeded"
+                                                        ]
+                                                    },
+                                                    "type": "Compose"
+                                                }
+                                            },
+                                            "description": "Must run sequentially",
+                                            "foreach": "@variables('BatchPagesArray')",
+                                            "runAfter": {
+                                                "SetBatchPagesArray": [
+                                                    "Succeeded"
+                                                ]
+                                            },
+                                            "runtimeConfiguration": {
+                                                "concurrency": {
+                                                    "repetitions": 1
+                                                }
+                                            },
+                                            "type": "Foreach"
+                                        },
+                                        "SetBatchPagesArray": {
+                                            "actions": {
+                                                "SetChangeSetPagesArrayExact": {
+                                                    "inputs": {
+                                                        "name": "BatchPagesArray",
+                                                        "value": "@range(0,div(length(variables('FoldersToProcess')), outputs('ComposeBatchPageSize')))"
+                                                    },
+                                                    "runAfter": {},
+                                                    "type": "SetVariable"
+                                                }
+                                            },
+                                            "else": {
+                                                "actions": {
+                                                    "SetChangeSetPagesArrayOver": {
+                                                        "inputs": {
+                                                            "name": "BatchPagesArray",
+                                                            "value": "@range(0,add(div(length(variables('FoldersToProcess')), outputs('ComposeBatchPageSize')), 1))"
+                                                        },
+                                                        "runAfter": {},
+                                                        "type": "SetVariable"
+                                                    }
+                                                }
+                                            },
+                                            "expression": {
+                                                "or": [
+                                                    {
+                                                        "equals": [
+                                                            "@float(concat(div(length(variables('FoldersToProcess')), outputs('ComposeBatchPageSize')), '.', mod(length(variables('FoldersToProcess')), outputs('ComposeBatchPageSize'))))",
+                                                            1
+                                                        ]
+                                                    },
+                                                    {
+                                                        "equals": [
+                                                            "@mod(length(variables('FoldersToProcess')), outputs('ComposeBatchPageSize'))",
+                                                            0
+                                                        ]
+                                                    }
+                                                ]
+                                            },
+                                            "runAfter": {
+                                                "ComposeBatchPageSize": [
+                                                    "Succeeded"
+                                                ]
+                                            },
+                                            "type": "If"
+                                        }
+                                    },
+                                    "expression": {
+                                        "and": [
+                                            {
+                                                "greater": [
+                                                    "@length(variables('FoldersToProcess'))",
+                                                    0
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    "runAfter": {},
+                                    "type": "If"
+                                }
+                            },
+                            "runAfter": {
+                                "TransformAndGetFoldersToProcess": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Scope"
+                        },
+                        "UpdateFoldersErrorHandling": {
+                            "actions": {},
+                            "runAfter": {
+                                "UpdateFolders": [
+                                    "Failed",
+                                    "TimedOut"
+                                ]
+                            },
+                            "type": "Scope"
+                        }
+                    },
+                    "contentVersion": "1.0.0.0",
+                    "outputs": {},
+                    "parameters": {
+                        "$connections": {
+                            "defaultValue": {},
+                            "type": "Object"
+                        }
+                    },
+                    "triggers": {
+                        "manual": {
+                            "inputs": {
+                                "method": "GET",
+                                "schema": {
+                                    "$schema": "http://json-schema.org/draft-04/schema#",
+                                    "properties": {}
+                                }
+                            },
+                            "kind": "Http",
+                            "type": "Request"
+                        }
+                    }
+                },
+                "integrationAccount": {
+                    "id": "[resourceId('Microsoft.Logic/integrationAccounts', 'SharePointBatchIntegrationAccount')]"
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Logic/integrationAccounts', 'SharePointBatchIntegrationAccount')]",
+                "[resourceId('Microsoft.Web/connections', 'sharepointonline-1')]"
+            ]
+        },
+        {
+            "type": "Microsoft.Web/connections",
+            "name": "sharepointonline-1",
+            "apiVersion": "2016-06-01",
+            "location": "[resourceGroup().location]",
+            "scale": null,
+            "properties": {
+                "displayName": "SharePointOnline",
+                "customParameterValues": {},
+                "api": {
+                    "id": "[concat(subscription().Id, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/sharepointonline')]"
+                }
+            },
+            "dependsOn": []
+        },
+        {
+            "type": "Microsoft.Logic/integrationAccounts",
+            "sku": {
+                "name": "Free"
+            },
+            "name": "SharePointBatchIntegrationAccount",
+            "apiVersion": "2016-06-01",
+            "location": "[resourceGroup().location]",
+            "scale": null,
+            "properties": {
+                "state": "Enabled"
+            },
+            "dependsOn": []
+        },
+        {
+            "type": "Microsoft.Logic/integrationAccounts/maps",
+            "name": "'SharePointBatchIntegrationAccount/Folder-To-Process'",
+            "apiVersion": "2016-06-01",
+            "location": "[resourceGroup().location]",
+            "scale": null,
+            "properties": {
+                "mapType": "Liquid",
+                "contentType": "text/plain",
+                "content": "[parameters('LiquidFile')]"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Logic/integrationAccounts', 'SharePointBatchIntegrationAccount')]"
+            ]
+        }
+    ],
+    "outputs": {}
+  }

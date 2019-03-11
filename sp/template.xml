@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<pnp:Provisioning xmlns:pnp="http://schemas.dev.office.com/PnP/2018/01/ProvisioningSchema">
+    <pnp:Preferences Generator="OfficeDevPnP.Core, Version=2.26.1805.1, Culture=neutral, PublicKeyToken=5e633289e95c321a" />
+    <pnp:Templates ID="CONTAINER-TEMPLATE-ACD25575AE394B7A842783C20F735B20">
+        <pnp:ProvisioningTemplate ID="TEMPLATE-ACD25575AE394B7A842783C20F735B20" Version="1" BaseSiteTemplate="STS#0" Scope="RootSite">
+            <pnp:ListInstance Title="LogicAppSharePointBatch" Url="LogicAppSharePointBatch" Description="" DocumentTemplate="{site}/LogicAppSharePointBatch/Forms/template.dotx" OnQuickLaunch="true" TemplateType="101" EnableVersioning="true" MinorVersionLimit="0" MaxVersionLimit="500" DraftVersionVisibility="0" TemplateFeatureID="00bfea71-e717-4e80-aa17-d0c71b360101" EnableAttachments="false" IsApplicationList="false">
+                <pnp:ContentTypeBindings>
+                    <pnp:ContentTypeBinding ContentTypeID="0x0101" Default="true" />
+                    <pnp:ContentTypeBinding ContentTypeID="0x0120" />
+                </pnp:ContentTypeBindings>
+                <pnp:Views>
+                    <View Name="{DF442BD7-592B-4A28-BF63-4FED3F24FCBF}" DefaultView="TRUE" MobileView="TRUE" MobileDefaultView="TRUE" Type="HTML" DisplayName="All Documents" Url="{site}/LogicAppSharePointBatch/Forms/AllItems.aspx" Level="1" BaseViewID="1" ContentTypeID="0x" ImageUrl="/_layouts/15/images/dlicon.png?rev=45">
+                        <Query>
+                            <OrderBy>
+                                <FieldRef Name="ID" Ascending="False" />
+                            </OrderBy>
+                        </Query>
+                        <ViewFields>
+                            <FieldRef Name="DocIcon" />
+                            <FieldRef Name="LinkFilename" />
+                            <FieldRef Name="FolderCode" />
+                        </ViewFields>
+                        <RowLimit Paged="TRUE">30</RowLimit>
+                        <JSLink>clienttemplates.js</JSLink>
+                        <CustomFormatter />
+                    </View>
+                </pnp:Views>
+                <pnp:Fields>
+                    <Field DisplayName="FolderCode" Title="FolderCode" Type="Text" ID="{e3b18452-9819-4757-92f2-606ddd7b45a6}" StaticName="FolderCode" Name="FolderCode" Indexed="TRUE" AutoIndexed="TRUE" />
+                </pnp:Fields>
+            </pnp:ListInstance>
+        </pnp:ProvisioningTemplate>
+    </pnp:Templates>
+</pnp:Provisioning>
