@@ -7,15 +7,9 @@ This sample explore a way to use some SharePoint and Logic App features combined
 
 Sometime, we need to run some background processes or Jobs to execute some tasks on SharePoint content. Regarding the data, we quickly face 2 main challenges : Limits and Performances.
 
-  
-
 Back in the day, we liked to use some local or cloud scripting like PowerShell, Azure WebJobs or Azure Function and we had to handle these different aspects of limits and performances.
 
-  
-
 Logic App offers a great alternative to these approaches because we can leverage some very useful features for this kind of scenario:
-
-  
 
 - Its connectors facilitate the use of different API
 
@@ -27,17 +21,11 @@ Logic App offers a great alternative to these approaches because we can leverage
 
 - We 'only' focus on the control flow and messaging between services
 
-  
-
 On the other hand,
-
-  
 
 - it's a new environment that impose a new way of thinking (at least for me ^^) and transposing some concepts like fetching big content or batching operations could be burdensome.
 
 - We don't necessary have the same control on data operations and transformations compared to a pure scripting approach (i.e: the platform could be hard to extend, we can only use the set of predefined function, cannot easily manipulate the concept of local variables, etc...etc...)
-
-  
 
 This sample show a way to implement fetching over 5000 items (by overcoming the SharePoint REST limit of 5000 items max by response), applying some transformation and business logic using Liquid when Logic App OOTB actions are too limited, and batching operation back to SharePoint using the `_api/$batch` endpoint of SharePoint.
 
@@ -45,17 +33,13 @@ This sample show a way to implement fetching over 5000 items (by overcoming the 
 
 For this sample, let's create a simple scenario where we have a document library named *LogicAppSharePointBatch* with a custom string column named *FolderCode*.
 
-  
 
 ![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list1.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list1.PNG)
 
   
-
 We need to get all folders from a documents library and apply them a 'custom code' using a little 'dummy' pattern.
 
 We want the *FolderCode* to be:
-
-  
 
 **FOLDER**`[FolderId]`  **(**`[folder_path_values_sorted_alphabetically]`**)**
 
@@ -63,16 +47,12 @@ i.e: for a folder called "foo" with ID 4 located inside a folder "toto" at the l
 
 I know, it's a stupid pattern, but it's just for demo purpose ^^
 
-  
-
 So, after the job, we expect any *FolderCode* to be updated with this pattern.
 
-  
 
 ![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list2.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list2.PNG)
 
   
-
 ## The SharePoint List
 
 For our test, we inject more than 5000 folders to make sure we hit the list threshold, but, more important, to make sure the REST request for all folders does not content 'all folders' but the 5000 first ones.
@@ -81,17 +61,11 @@ These folders doesn't have to be at the root. We can have a folder structure.
 
 Here's my situation:
 
-  
-
 ![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list3.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list3.PNG)
-
-  
 
 ## The Logic App
 
 The process is divided into four main steps:
-
-  
 
 1. Fetching the Documents Library Folder's items to get all of them.
 
@@ -101,35 +75,19 @@ The process is divided into four main steps:
 
 4. Generate and send the batch report to a recipient (could be something else, like leveraging Azure Alert).
 
-  
-
 > I won't go through all the Logic App structure. I just highlight the important points I had to tackle.
 
-  
-
-A good starting point to deal with different aspect of SharePoint REST API is here: [https://docs.microsoft.com/en-us/sharepoint/dev/sp-add-ins/get-to-know-the-sharepoint-rest-service](https://docs.microsoft.com/en-us/sharepoint/dev/sp-add-ins/get-to-know-the-sharepoint-rest-service)
-
-  
+ A good starting point to deal with different aspect of SharePoint REST API is here: [https://docs.microsoft.com/en-us/sharepoint/dev/sp-add-ins/get-to-know-the-sharepoint-rest-service](https://docs.microsoft.com/en-us/sharepoint/dev/sp-add-ins/get-to-know-the-sharepoint-rest-service)
 
 **Error Handling**
 
-  
-
 I like to use scopes to organize the process sequences because everything is explained here ;) : [https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-control-flow-run-steps-group-scopes](https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-control-flow-run-steps-group-scopes)
 
-  
-
-My Logic App overall structure with error handling looks like this:
-
-  
+My Logic App overall structure with error handling looks like this:  
 
 ![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list4.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list4.PNG)
 
-  
-
 As you can see, each logical decomposition represented by a scope has a parallel branch to manage error that occurred somewhere in the scope. Up to you to plug any custom logic to manage your errors.
-
-  
 
 **Logic App Variables**
 
@@ -161,17 +119,11 @@ Stores the list of folders that need to be processed.
 -  *BatchResponse*:
 Stores the SharePoint batch response.
 
-**Step 1: Fetch items**
-
-  
+**Step 1: Fetch items** 
 
 ![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list5.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list5.PNG)
 
-  
-
-The challenge here occurs when we have more than 5000 items in the documents library. The SharePoint REST API can returns up to 5000 items max if we specify the `$top=5000` parameter, but no more. In this case, SharePoint returns pages of response containing 5000 items. Here, the next result page can be accessed by getting the `odata.nextLink` value from the response.
-
-  
+ The challenge here occurs when we have more than 5000 items in the documents library. The SharePoint REST API can returns up to 5000 items max if we specify the `$top=5000` parameter, but no more. In this case, SharePoint returns pages of response containing 5000 items. Here, the next result page can be accessed by getting the `odata.nextLink` value from the response.
 
 So, we start with a REST query to get the information we need, something like:
 
@@ -183,13 +135,9 @@ But the transformation step, we need to convert this ItemsArray to a JSON object
 
 The only tricky point I had here was to replace any attribute using a dot (.) in their names (i.e: metadata like `odata.id`, `odata.etag`, ...) because it's like Liquid doesn't manage attribute with dots. So I take the original JSON provided by *ItemArray* and I replace any "`odata.`" string by "`odata`". This is why we have an additional *FixedItemsJson* action.
 
-**Step 2: Check items**
-
-  
+**Step 2: Check items**  
 
 ![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list6.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list6.PNG)
-
-  
 
 In this step, we want to check all the items to filter and transform according to our rules.
 
@@ -232,17 +180,17 @@ To overcome these constrains, i decided to page batches. So, for each page of 10
 
 The paging logic is contained all along within the *UpdateFolders* scope. This is how we can decompose this sequence at high level:
 
-[list14]
+![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list14.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list14.PNG)
 
 *SetBatchPagesArray*: Calculate the array used for paging, one array element for one page.
 
-[list13]
+![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list13.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list13.PNG)
 
 *ProcessBatchPages*: For each batch page, get folders info contained in the batch page, build the batch HTTP request dynamically and send the batch request to SharePoint. Once the request executed, parse results to prepare the response message.
 
 ! important: This step must run sequentially, one page after the other, to avoid unexpected results because we use nested foreach and variables assignments. The nested foreach can run in parallel.
 
-[list15]
+![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list15.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list15.PNG)
 
 I won't go over how to make batch request to SharePoint, good information can be find here: [https://docs.microsoft.com/en-us/sharepoint/dev/sp-add-ins/make-batch-requests-with-the-rest-apis](https://docs.microsoft.com/en-us/sharepoint/dev/sp-add-ins/make-batch-requests-with-the-rest-apis), but the challenge here was to format correctly the HTTP request sent to the SharePoint $batch endpoint...To make it short:
 
@@ -293,6 +241,8 @@ If you have read the Liquid documentation on Azure, you know that your Liquid te
 `content` : it's the representation of our provided JSON. 
 
 `{% for c in content %}` : Parse all our items.
+
+`{% assign  ct = c.ContentTypeId  | Slice: 0, 6 %}` : Get the Content-Type prefix.
 
 `{% if  c.FolderCode.size == 0 and ct == '0x0120' %}` : Keep only folders with no FolderCode.
 
