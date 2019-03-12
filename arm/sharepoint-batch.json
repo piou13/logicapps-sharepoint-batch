@@ -20,7 +20,7 @@
         {
             "type": "Microsoft.Logic/integrationAccounts",
             "sku": {
-                "name": "Standard"
+                "name": "Free"
             },
             "name": "SharePointBatchIntegrationAccount",
             "apiVersion": "2016-06-01",
