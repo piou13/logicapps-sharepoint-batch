@@ -261,12 +261,28 @@ If you have read the Liquid documentation on Azure, you know that your Liquid te
 
  - An Azure subscription
  - A Resource Group
- - To be an owner of the Resource Group
+ - Owner of the Resource Group
+ - Site Collection Admin on the SharePoint Site
 
 **The sample contains:**
 
- - The Azure ARM Template to deploy the Logic App and the Integration Account
- - The Liquid Template
- - The PowerShell setup script
+ - The Azure ARM Template.
+ - The Liquid Template.
+ - The SharePoint PnP Template to install the sample documents library.
+ - The PowerShell setup script.
 
-To install the sample, run the PowerShell script, enter credentials and enter the name of your Resource Group where you want to install the solution.
+**Run the sample**
+
+To install the sample, run the PowerShell script from its location with the following parameters:
+
+ - *ResourceGroupName*: The name of an existing resources group.
+ - *SharePointSite*: The absolute URL of an existing SharePoint Site.
+
+In the Resources Group, the script will deploy the Integration Account and Map, the Logic App and the SharePoint API Connection.
+
+In the sharePoint site, the script will create a documents library called *LogicAppSharePointBatch* with the *FolderCode* column and some folders already provisioned ;).
+
+After the installation, you need to activate the SharePoint API connection in the Logic App settings. This Step requires some credentials for the Logic App connector to connect the SharePoint API.
+
+![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list16.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list16.PNG)
+

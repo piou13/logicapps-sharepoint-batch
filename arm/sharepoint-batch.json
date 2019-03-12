@@ -2,21 +2,65 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "ResourceGroupName": {
-            "type": "string",
-            "metadata": {
-                "description": "Name of the resource group to deploy the solution."
-            }
-        },
         "LiquidFile": {
             "type": "string",
             "metadata": {
                 "description": "Content of the liquid file to upload to Integration Account."
             }
+        },
+        "SharePointSite": {
+            "type": "string",
+            "metadata": {
+                "description": "Absolute URL of the SharePoint site containing the list."
+            }
         }
     },
     "variables": {},
     "resources": [
+        {
+            "type": "Microsoft.Logic/integrationAccounts",
+            "sku": {
+                "name": "Standard"
+            },
+            "name": "SharePointBatchIntegrationAccount",
+            "apiVersion": "2016-06-01",
+            "location": "[resourceGroup().location]",
+            "scale": null,
+            "properties": {
+                "state": "Enabled"
+            },
+            "dependsOn": []
+        },
+        {
+            "type": "Microsoft.Logic/integrationAccounts/maps",
+            "name": "SharePointBatchIntegrationAccount/Folder-To-Process",
+            "apiVersion": "2016-06-01",
+            "location": "[resourceGroup().location]",
+            "scale": null,
+            "properties": {
+                "mapType": "Liquid",
+                "contentType": "text/plain",
+                "content": "[parameters('LiquidFile')]"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Logic/integrationAccounts', 'SharePointBatchIntegrationAccount')]"
+            ]
+        },
+        {
+            "type": "Microsoft.Web/connections",
+            "name": "sharepointonline",
+            "apiVersion": "2016-06-01",
+            "location": "[resourceGroup().location]",
+            "scale": null,
+            "properties": {
+                "displayName": "SharePointOnline",
+                "customParameterValues": {},
+                "api": {
+                    "id": "[concat(subscription().Id, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/sharepointonline')]"
+                }
+            },
+            "dependsOn": []
+        },
         {
             "type": "Microsoft.Logic/workflows",
             "name": "LogicAppSharePointBatch",
@@ -293,7 +337,7 @@
                         "Finalize": {
                             "actions": {
                                 "Results": {
-                                    "inputs": "Total Folders: @{length(variables('ItemsArray'))}\nFolders to Processed: \n-------------------------------------------------------------------------------------\nBATCH RESPONSE:\n-------------------------------------------------------------------------------------\n@{variables('BatchResponse')}",
+                                    "inputs": "Total Folders: @{length(variables('ItemsArray'))}\nFolders Processed: @{length(body('GetFoldersToProcess'))}\n-------------------------------------------------------------------------------------\nBATCH RESPONSE:\n-------------------------------------------------------------------------------------\n@{variables('BatchResponse')}",
                                     "runAfter": {},
                                     "type": "Compose"
                                 }
@@ -491,7 +535,7 @@
                                     {
                                         "name": "SiteAbsoluteUrl",
                                         "type": "String",
-                                        "value": "https://sewolca.sharepoint.com/sites/poc-finpub/"
+                                        "value": "[parameters('SharePointSite')]"
                                     }
                                 ]
                             },
@@ -619,7 +663,7 @@
                                                         "AppendChangeSetRequestBody": {
                                                             "inputs": {
                                                                 "name": "ChangeSetRequestBody",
-                                                                "value": "\n--@{variables('ChangeSetBoundary')}\nContent-Type: application/http\nContent-Transfer-Encoding: binary\n\n\nPATCH @{variables('SiteAbsoluteUrl')}_api/web/lists/getbytitle('@{variables('ListName')}')/items(@{items('ForEachFolderToProcess')['FolderId']}) HTTP/1.1\nContent-Type: application/json;odata=verbose\nAccept: application/json;odata=verbose\nIf-Match: *\n\n{\"__metadata\": {\"type\": \"SP.Data.LogicAppSharePointBatchItem\" },\"FolderCode\": \"@{items('ForEachFolderToProcess')['FolderCode']}\"}\n"
+                                                                "value": "\n--@{variables('ChangeSetBoundary')}\nContent-Type: application/http\nContent-Transfer-Encoding: binary\n\n\nPATCH @{variables('SiteAbsoluteUrl')}/_api/web/lists/getbytitle('@{variables('ListName')}')/items(@{items('ForEachFolderToProcess')['FolderId']}) HTTP/1.1\nContent-Type: application/json;odata=verbose\nAccept: application/json;odata=verbose\nIf-Match: *\n\n{\"__metadata\": {\"type\": \"SP.Data.LogicAppSharePointBatchItem\" },\"FolderCode\": \"@{items('ForEachFolderToProcess')['FolderCode']}\"}\n"
                                                             },
                                                             "runAfter": {},
                                                             "type": "AppendToStringVariable"
@@ -839,55 +883,22 @@
                 },
                 "integrationAccount": {
                     "id": "[resourceId('Microsoft.Logic/integrationAccounts', 'SharePointBatchIntegrationAccount')]"
+                },
+                "parameters": {
+                    "$connections": {
+                        "value": {
+                            "sharepointonline": {
+                                "connectionId": "[resourceId('Microsoft.Web/connections', 'sharepointonline')]",
+                                "connectionName": "sharepointonline",
+                                "id": "[concat(subscription().Id, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/sharepointonline')]"
+                            }
+                        }
+                    }
                 }
             },
             "dependsOn": [
                 "[resourceId('Microsoft.Logic/integrationAccounts', 'SharePointBatchIntegrationAccount')]",
-                "[resourceId('Microsoft.Web/connections', 'sharepointonline-1')]"
-            ]
-        },
-        {
-            "type": "Microsoft.Web/connections",
-            "name": "sharepointonline-1",
-            "apiVersion": "2016-06-01",
-            "location": "[resourceGroup().location]",
-            "scale": null,
-            "properties": {
-                "displayName": "SharePointOnline",
-                "customParameterValues": {},
-                "api": {
-                    "id": "[concat(subscription().Id, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/sharepointonline')]"
-                }
-            },
-            "dependsOn": []
-        },
-        {
-            "type": "Microsoft.Logic/integrationAccounts",
-            "sku": {
-                "name": "Free"
-            },
-            "name": "SharePointBatchIntegrationAccount",
-            "apiVersion": "2016-06-01",
-            "location": "[resourceGroup().location]",
-            "scale": null,
-            "properties": {
-                "state": "Enabled"
-            },
-            "dependsOn": []
-        },
-        {
-            "type": "Microsoft.Logic/integrationAccounts/maps",
-            "name": "'SharePointBatchIntegrationAccount/Folder-To-Process'",
-            "apiVersion": "2016-06-01",
-            "location": "[resourceGroup().location]",
-            "scale": null,
-            "properties": {
-                "mapType": "Liquid",
-                "contentType": "text/plain",
-                "content": "[parameters('LiquidFile')]"
-            },
-            "dependsOn": [
-                "[resourceId('Microsoft.Logic/integrationAccounts', 'SharePointBatchIntegrationAccount')]"
+                "[resourceId('Microsoft.Web/connections', 'sharepointonline')]"
             ]
         }
     ],
