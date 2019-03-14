@@ -7,7 +7,7 @@ This sample explore a way to use some SharePoint and Logic Apps features combine
 
 Sometimes, we need to run some background processes or Jobs to execute some tasks on SharePoint content. Regarding the data, we quickly face 2 main challenges : Limits and Performances.
 
-Back in the days, we liked to use some local or cloud scripting like PowerShell, Azure WebJobs or Azure Function and we had to handle these different aspects of limits and performances.
+Back in the days, we liked to use some local or cloud scripting like Console Application, PowerShell, Azure WebJobs or Azure Function and we had to handle these different aspects of limits and performances.
 
 Logic Apps offers a great alternative to these approaches because we can leverage some very useful features for this kind of scenario:
 
