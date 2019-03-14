@@ -188,7 +188,7 @@ The paging logic is contained all along within the *UpdateFolders* scope. This i
 
 *ProcessBatchPages*: For each batch page, get folders info contained in the batch page, build the batch HTTP request dynamically and send the batch request to SharePoint. Once the request executed, parse results to prepare the response message.
 
-! important: This step must run sequentially, one page after the other, to avoid unexpected results because we use nested foreach and variables assignments. The nested foreach can run in parallel.
+! important: This step must run sequentially, one page after the other, to avoid unexpected results because we use nested foreach and variables assignments. The nested foreach can run in parallel because the requests' order is not important.
 
 ![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list15.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list15.PNG)
 
