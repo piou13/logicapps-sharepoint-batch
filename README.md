@@ -1,15 +1,15 @@
 
-# logicapp-sharepoint-batch
+# logicapps-sharepoint-batch
 
-This sample explore a way to use some SharePoint and Logic App features combined for background jobs.
+This sample explore a way to use some SharePoint and Logic Apps features combined for background jobs.
 
 ## Introduction
 
-Sometime, we need to run some background processes or Jobs to execute some tasks on SharePoint content. Regarding the data, we quickly face 2 main challenges : Limits and Performances.
+Sometimes, we need to run some background processes or Jobs to execute some tasks on SharePoint content. Regarding the data, we quickly face 2 main challenges : Limits and Performances.
 
-Back in the day, we liked to use some local or cloud scripting like PowerShell, Azure WebJobs or Azure Function and we had to handle these different aspects of limits and performances.
+Back in the days, we liked to use some local or cloud scripting like PowerShell, Azure WebJobs or Azure Function and we had to handle these different aspects of limits and performances.
 
-Logic App offers a great alternative to these approaches because we can leverage some very useful features for this kind of scenario:
+Logic Apps offers a great alternative to these approaches because we can leverage some very useful features for this kind of scenario:
 
 - Its connectors facilitate the use of different API
 
@@ -27,7 +27,7 @@ On the other hand,
 
 - We don't necessary have the same control on data operations and transformations compared to a pure scripting approach (i.e: the platform could be hard to extend, we can only use the set of predefined function, cannot easily manipulate the concept of local variables, etc...etc...)
 
-This sample show a way to implement fetching over 5000 items (by overcoming the SharePoint REST limit of 5000 items max by response), applying some transformation and business logic using Liquid when Logic App OOTB actions are too limited, and batching operation back to SharePoint using the `_api/$batch` endpoint of SharePoint.
+This sample show a way to implement fetching over 5000 items (by overcoming the SharePoint REST limit of 5000 items max by response), applying some transformation and business logic using Liquid when Logic Apps OOTB actions are too limited, and batching operation back to SharePoint using the `_api/$batch` endpoint of SharePoint.
 
 ## The Scenario
 
@@ -63,7 +63,7 @@ Here's my situation:
 
 ![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list3.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list3.PNG)
 
-## The Logic App
+## The Logic Apps
 
 The process is divided into four main steps:
 
@@ -75,7 +75,7 @@ The process is divided into four main steps:
 
 4. Generate and send the batch report to a recipient (could be something else, like leveraging Azure Alert).
 
-> I won't go through all the Logic App structure. I just highlight the important points I had to tackle.
+> I won't go through all the Logic Apps structure. I just highlight the important points I had to tackle.
 
  A good starting point to deal with different aspect of SharePoint REST API is here: [https://docs.microsoft.com/en-us/sharepoint/dev/sp-add-ins/get-to-know-the-sharepoint-rest-service](https://docs.microsoft.com/en-us/sharepoint/dev/sp-add-ins/get-to-know-the-sharepoint-rest-service)
 
@@ -83,15 +83,15 @@ The process is divided into four main steps:
 
 I like to use scopes to organize the process sequences because everything is explained here ;) : [https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-control-flow-run-steps-group-scopes](https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-control-flow-run-steps-group-scopes)
 
-My Logic App overall structure with error handling looks like this:  
+My Logic Apps overall structure with error handling looks like this:  
 
 ![https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list4.PNG](https://github.com/piou13/logicapp-sharepoint-batch/blob/master/docs/list4.PNG)
 
 As you can see, each logical decomposition represented by a scope has a parallel branch to manage error that occurred somewhere in the scope. Up to you to plug any custom logic to manage your errors.
 
-**Logic App Variables**
+**Logic Apps Variables**
 
-To help you to understand the data manipulation inside the flow, here is the explanation for every variable we use in the Logic App:
+To help you to understand the data manipulation inside the flow, here is the explanation for every variable we use in the Logic Apps:
 
 -  *SiteAbsoluteUrl*:
 Stores the site collection absolution URL. You don't really need this one because you can pass this information using a better way, but once again, it's for demo purpose.
@@ -145,7 +145,7 @@ First, we want to keep only folders and those that don't have a *FolderCode* def
 
 Then, we want to transform some information to generate the *FolderCode*.
 
-Finally, we want to send back the result in a way that can be easily used by the following steps in Logic App.
+Finally, we want to send back the result in a way that can be easily used by the following steps in Logic Apps.
 
 Here, to get to the goal, Logic App's built-in actions like 'Select' are too limited for our need, and it's very hard to implement any custom logic using them. Also, we can use intensively Logic App's built-in loops like For-each or Until, but they are slow and very challenging when they are used in conjunction with variables. For the good and the bad about that, see: [https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-control-flow-loops](https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-control-flow-loops) and [https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-create-variables-store-values](https://docs.microsoft.com/en-us/azure/logic-apps/logic-apps-create-variables-store-values)
 
